@@ -1,13 +1,59 @@
 # Modifiche alla pipeline di CI/CD
 
-Rispetto alla precedente configurazione, la pipeline è stata rivisitata in modo da migliorarla e renderla più chiara.
+La baseline conteneva già un file chiamato [build-test.yml](https://github.com/lucasalvaa/SwD_SafePet_backend/blob/53af8be989e15ea82b7121ef46eee072f5f2d5d8/.github/workflows/build-test.yml)
+con una pipeline monolitica che include nello stesso workflow sia la logica di Continuous Integration che quella di Continuous Delivery.
+In altre parole, subito dopo aver eseguito i test e aver salvato il report di checkstyle, il workflow crea un'immagine Docker del progetto e la carica su DockerHub.
+Quest'ultima operazione, tutt'altro che rapida, non viene eseguita solo quando una pull request viene integrata nel branch main, ma anche ogni qual volta che viene aperta una pull request.
 
-Innanzitutto il workflow è stato rinominato in "CI Pipeline" in modo che rifletta bene ciò che deve fare.
-Successivamente abbiamo disaccoppiato la parte di CI da quella di CD: sono stati infatti rimossi gli step relativi alla dockerizzazione, che verrà poi inserita in un workflow a parte.
+Inoltre, disaccoppiare la logica di CI da quella di CD migliorerebbe la leggibilità (e quindi la manutenibilità) delle due pipeline.
+Sempre a questo scopo, alcuni steps relativi alla build del progetto potrebbero essere unificati sfruttando meglio le potenzialità di Apache Maven
+Pertanto, la pipeline è stata rivisitata in modo da migliorarla e renderla più chiara.
 
-Lo step successivo ha riguardato la pulizia dei trigger, abbiamo di fatto eliminato il vecchio branch CI-Test, limitando l'attivazione della pipeline al solo branch main.
+## Disaccoppiamento delle responsabilità e pulizia dei trigger
+Innanzitutto, il workflow è stato rinominato in `CI Pipeline`, in modo che rifletta bene ciò che deve fare,
+e sono stati infatti rimossi gli steps finali relativi alla CD, che verrà poi implementata in un workflow a parte.
 
-Un miglioramento centrale è stato l'unificazione del ciclo Maven sostituendo i comandi separati della vecchia pipeline (clean compile, checkstyle:check e test) con un unico comando mvn -B -ntp clean verify sfruttando il [Maven Build Lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html), e la modifica al pom.xml, inserendo la phase validate al posto di verify in modo da effettuare un'analisi statica del testo, compilare ed infine eseguire i test (evitando ridondanze nella pipeline) 	
+Per quanto riguarda i trigger, l'attivazione della pipeline è stata limitata agli eventi di *push* e *pull_request*
+sul solo branch `main`, eliminando di fatto il vecchio branch sperimentale `CI-Test`.
+
+## Unificazione degli steps di Maven
+Un miglioramento centrale è stato l'unificazione di tre steps concernenti le fasi _compile_, _checkstyle:check_ e _test_
+del [Maven Build Lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html) con un unico step:
+```yaml
+# prima 
+- name: Maven Build
+  run: mvn -B clean compile
+
+- name: Run Checkstyle
+  run: mvn -B checkstyle:check
+
+- name: Run Tests
+  run: mvn -B test
+  
+# dopo
+- name: Build, Checkstyle & Test
+  run: mvn -B -ntp clean verify
+```
+Il comando `mvn verify` esegue anche le fasi precedenti del ciclo, i.e., _validate_, _compile_, _test_ e _package_.
+Nel file `pom.xml`, la fase di esecuzione del plugin checkstyle è stata cambiata da _verify_ a _validate_, affinché
+l'analisi statica del codice venga eseguita prima della compilazione dello stesso.
+
+Gli steps successivi per generare il report di checkstyle in html e caricarlo nell'ambiente sono rimasti pressoché
+invariati rispetto alla baseline.
+
+```yaml
+- name: Generate Checkstyle Report
+  if: always()
+  run: mvn -B -ntp checkstyle:checkstyle
+
+- name: Upload Checkstyle Report
+  if: always()
+  uses: actions/upload-artifact@v7.0.0
+  with:
+    name: checkstyle-report
+    path: target/site/checkstyle.html
+    if-no-files-found: ignore
+```
 
 ## Aggiornamento delle dipendenze
 Tutte le dipendenze all'interno del file `pom.xml` sono state aggiornate all'ultima versione.
