@@ -16,6 +16,25 @@ e sono stati infatti rimossi gli steps finali relativi alla CD, che verrà poi i
 Per quanto riguarda i trigger, l'attivazione della pipeline è stata limitata agli eventi di *push* e *pull_request*
 sul solo branch `main`, eliminando di fatto il vecchio branch sperimentale `CI-Test`.
 
+## Least Privilege, Checkout e aggiornamento delle Actions
+Al fine di integrare il principio del *Least Privilege* è stato inserito il blocco `permissions: contents: read`: limita il token alla sola lettura.
+In questo modo vengono evitate modifiche non autorizzate al codice prima dello step di *checkout*, che scarica il codice sorgente del repository all'interno dell'ambiente virtuale Ubuntu (`ubuntu-latest`) su cui eseguire la build.
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Verify Maven Project
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout del codice sorgente
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+```
+Inoltre, tutte le actions utilizzate sono state aggiornate alle versioni più recenti.
+
 ## Unificazione degli steps di Maven
 Un miglioramento centrale è stato l'unificazione di tre steps concernenti le fasi _compile_, _checkstyle:check_ e _test_
 del [Maven Build Lifecycle](https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html) con un unico step:
@@ -60,7 +79,7 @@ Tutte le dipendenze all'interno del file `pom.xml` sono state aggiornate all'ult
 Il gruppo `com.openhtmltopdf`, non più mantenuto, è stato sostituito con `io.github.openhtmltopdf`.
 
 Inoltre, nel tag \<properties> sono state aggiunte delle variabili (e.g., `<jjwt.version>0.12.6</jjwt.version>`) affinché, qualora vi fossero
-più dipendenze che attingono da uno stesso gruppo, ognuna di esse aggiornati il gruppo alla stessa versione in modo consistente.
+più dipendenze che attingono da uno stesso gruppo, ognuna di esse aggiorni il gruppo alla stessa versione in modo consistente.
 
 ## Salvataggio del file .jar
 Per evitare di eseguire una seconda volta la build del progetto in fase di Continuous Delivery, si può salvare l'artefatto `target/backend.jar`.
