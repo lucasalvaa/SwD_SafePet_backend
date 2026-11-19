@@ -19,6 +19,7 @@ sul solo branch `main`, eliminando di fatto il vecchio branch sperimentale `CI-T
 ## Least Privilege, Checkout e aggiornamento delle Actions
 Al fine di integrare il principio del *Least Privilege* è stato inserito il blocco `permissions: contents: read`: limita il token alla sola lettura.
 In questo modo vengono evitate modifiche non autorizzate al codice prima dello step di *checkout*, che scarica il codice sorgente del repository all'interno dell'ambiente virtuale Ubuntu (`ubuntu-latest`) su cui eseguire la build.
+Inoltre, tutte le actions utilizzate nel workflow sono state aggiornate alle versioni più recenti.
 ```yaml
 permissions:
   contents: read
@@ -29,11 +30,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout del codice sorgente
       - name: Checkout repository
         uses: actions/checkout@v7.0.0
 ```
-Inoltre, tutte le actions utilizzate sono state aggiornate alle versioni più recenti.
 
 ## Unificazione degli steps di Maven
 Un miglioramento centrale è stato l'unificazione di tre steps concernenti le fasi _compile_, _checkstyle:check_ e _test_
