@@ -47,6 +47,27 @@ jobs:
           path: target/site/checkstyle.html
           if-no-files-found: ignore
 
+      # Generazione del report Jacoco
+      - name: Generate Jacoco Report
+        run: mvn jacoco:report
+
+#      - name: Upload coverage to Codecov
+#        uses: codecov/codecov-action@v4
+#        if: success() || failure()
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          file: ./target/site/jacoco/jacoco.xml
+#          flags: unittests
+#          name: codecov-umbrella
+#          fail_ci_if_error: false
+#
+#      - name: Upload test results to Codecov
+#        if: ${{ !cancelled() }}
+#        uses: codecov/test-results-action@v1
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          file: ./target/surefire-reports/TEST-*.xml
+
       # Salvataggio del .jar ottenuto dalla build nel cloud Github
       - name: Upload Application JAR
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
