@@ -21,8 +21,7 @@ jobs:
 
     if: >
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.event == 'push'
 
     steps:
       - name: Checkout repository
@@ -56,15 +55,14 @@ jobs:
             type=sha,format=long
             type=raw,value=latest
 
-      - uses: docker/build-push-action@v7.4.0
+      - name: Build and Push on DockerHub
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
           file: Dockerfile
           push: true
-          platforms: linux/amd64   # aggiungi arm64 solo se serve davvero
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
-          # cache-to: type=gha, mode=max # Salvataggio di tutti i layer dell'immagine nella cache di GitHub Actions
-          # cache-from: type=gha # Se un layer non è cambiato, viene riusato invece di essere rieseguito
