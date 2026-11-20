@@ -84,12 +84,6 @@
 			<artifactId>openhtmltopdf-slf4j</artifactId>
 			<version>${openhtmltopdf.version}</version>
 		</dependency>
-
-		<dependency>
-				<groupId>org.pitest</groupId>
-				<artifactId>pitest-junit5-plugin</artifactId>
-				<version>1.2.3</version>
-		</dependency>
 	</dependencies>
 
 	<build>
@@ -126,9 +120,12 @@
 				<version>0.8.16</version>
 				<configuration>
 					<excludes>
-						<exclude>**/seeders/*</exclude>
-						<exclude>**/controller/*</exclude>
-						<exclude>**/dto/*</exclude>
+						<exclude>**/seeders/**</exclude>
+						<exclude>**/controller/**</exclude>
+						<exclude>**/dto/**</exclude>
+						<exclude>**/config/**</exclude>
+						<exclude>**/exception/**</exclude>
+						<exclude>**/*Application*</exclude>
 					</excludes>
 				</configuration>
 				<executions>
@@ -159,12 +156,31 @@
 					<targetTests>
 						<param>it.safepet.backend.*</param>
 					</targetTests>
+					<mutators>
+						<mutator>DEFAULTS</mutator>
+						<mutator>REMOVE_INCREMENTS</mutator>
+					</mutators>
 					<verbose>true</verbose>
 					<outputFormats>
 						<outputFormat>HTML</outputFormat>
 						<outputFormat>XML</outputFormat>
 					</outputFormats>
+					<excludedClasses>
+						<param>it.safepet.backend.seeders.*</param>
+						<param>it.safepet.backend.*.controller.*</param>
+						<param>it.safepet.backend.*.dto.*</param>
+						<param>it.safepet.backend.config.*</param>
+						<param>it.safepet.backend.exception.*</param>
+						<param>it.safepet.backend.*Application*</param>
+					</excludedClasses>
 				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-junit5-plugin</artifactId>
+						<version>1.2.3</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>

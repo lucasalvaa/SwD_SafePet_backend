@@ -1,0 +1,41 @@
+name: Mutation Testing with Pitest
+on:
+  workflow_dispatch:
+    inputs:
+      target_classes:
+        required: false
+        default: "it.safepet.backend.*"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  pitest:
+    name: Run PITest Mutation Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v6.0.0
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run PITest Mutation Coverage
+        run: >
+          mvn -B -ntp test-compile org.pitest:pitest-maven:mutationCoverage
+          -DtargetClasses="${{ inputs.target_classes }}"
+
+      - name: Upload PITest Report
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: pitest-report-${{ github.run_number }}
+          path: target/pit-reports/
+          if-no-files-found: error
+          retention-days: 7

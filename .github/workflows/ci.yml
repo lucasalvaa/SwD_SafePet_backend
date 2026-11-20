@@ -39,6 +39,16 @@ jobs:
         if: always()
         run: mvn -B -ntp checkstyle:checkstyle
 
+      # Salvataggio del report JaCoCo generato durante clean verify
+      - name: Upload JaCoCo Report
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload Checkstyle Report
         if: always()
         uses: actions/upload-artifact@v7.0.0
@@ -47,26 +57,22 @@ jobs:
           path: target/site/checkstyle.html
           if-no-files-found: ignore
 
-      # Generazione del report Jacoco
-      - name: Generate Jacoco Report
-        run: mvn jacoco:report
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: success() || failure()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./target/site/jacoco/jacoco.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
-#      - name: Upload coverage to Codecov
-#        uses: codecov/codecov-action@v4
-#        if: success() || failure()
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          file: ./target/site/jacoco/jacoco.xml
-#          flags: unittests
-#          name: codecov-umbrella
-#          fail_ci_if_error: false
-#
-#      - name: Upload test results to Codecov
-#        if: ${{ !cancelled() }}
-#        uses: codecov/test-results-action@v1
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
-#          file: ./target/surefire-reports/TEST-*.xml
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./target/surefire-reports/TEST-*.xml
 
       # Salvataggio del .jar ottenuto dalla build nel cloud Github
       - name: Upload Application JAR
