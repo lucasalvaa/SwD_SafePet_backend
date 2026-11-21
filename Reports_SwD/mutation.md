@@ -1,21 +1,23 @@
 # Report sul Mutation Testing
 
-<!-- 
-1. Modifica al pom.xml per l'aggiunta del plugin Pitest, senza quality gates o treshold (spiega), escludendo diverse classi (scrivi motivazioni)
-
-2. Creazione del file pitest.yml con workflow dispatch per evitare di effettuare mutation testing ad ogni push, ma farlo da UI su github
-
-3. Scrivere i risultati del mutation testing
-Mutation score
-Number of killed vs. survived mutations
-Common patterns in survived mutations
-Areas with low mutation coverage
-
-4. Scrivere il piano di miglioramento del mutation score
--->
-
 ## Mutation Testing Configuration
+Il *Mutation Testing* è configurato nel file `pom.xml` tramite il plugin `pitest-maven` alla versione `1.30.2`, affiancato dalla dipendenza interna `pitest-junit5-plugin (1.2.3)` per garantire la piena compatibilità con JUnit 5. 
+Sia `<targetClasses>` sia `<targetTests>` sono impostati sul pattern `it.safepet.backend.*` in modo da analizzare l'intero dominio applicativo sfruttando i test gia esistenti. Per mantenere un'analisi allineata a quella effettuata con JaCoCo, sono stati esclusi tramite `<excludedClasses>` i package relativi a seeder, controller, DTO, classi di configurazione, le exception custom e la classe principale dell'applicazione.
+La configurazione utilizza i gruppi di mutatori `DEFAULTS` e `REMOVE_INCREMENTS`, generando i report contemporaneamente in formato HTML, utile per l'ispezione visuale delle singole righe mutate, e XML. Come fatto per la Code Coverage, non è stato attivato un *quality gate* bloccante tramite `<mutationThreshold>`, così da consentire una crescita graduale della qualità dei test. 
+Per ottimizzare il consumo di token su GitHub Actions, *PITest* è stato isolato nel workflow manuale `.github/workflows/pitest.yml`, attivabile su richiesta tramite **workflow_dispatch** con la possibilità di scaricare l'artifact del report.
 
 ## Mutation Analysis
+L'esecuzione di PITest sulle 33 classi analizzate ha restituito un **Mutation Score complessivo del 40%**, corrispondente a **179 mutazioni uccise su 452 generate**.
+Un dato interessante è la **Test Strength del 70%**, con **179 mutazioni uccise su 255 coperte**, a dimostrazione che, quando i test riescono a raggiungere il codice, sono generalmente efficaci nell'individuare eventuali mutanti.
+Analizzando nel dettaglio il numero di mutazioni uccise e non uccise, a fronte delle 179 mutazioni `KILLED`, si registrano **273 mutazioni non rilevate**: di queste, 76 sono effettivamente sopravvissute, mentre le restanti 197 appartengono alla categoria `NO_COVERAGE`, poiché collocate in classi o branch non ancora testati.
+Analizzando le 76 mutazioni sopravvissute emergono **tre criticità ricorrenti** nella progettazione dei test. 
+In primo luogo, si nota un **uso eccessivo di asserzioni generiche sui valori di ritorno dei metodi dei service**: molti test si limitano infatti a verificare che l'oggetto restituito non sia nullo, senza controllare il valore dei singoli attributi mappati nei DTO. Per questo, se una mutazione altera o azzera un campo durante il mapping, il test passa comunque senza rilevare l'anomalia.
+Un secondo problema riguarda le **mutazioni sui metodi void**: nello specifico, non controllando che i `metodi setter` dell'entità o il salvataggio tramite `repository.save` vengano effettivamente invocati, la rimozione di queste chiamate da parte del mutatore non provoca alcun fallimento.
+Infine, l'ultimo pattern è legato alla **scarsa copertura dei casi limite** all'interno delle condizioni relazionali e dei rami if/else. Poiché questi flussi vengono testati quasi esclusivamente lungo l'*happy path*, le mutazioni che modificano gli operatori di confronto sui valori limite passano inosservate.
+Le aree con bassa mutation coverage si dividono quindi in due categorie distinte. Da un lato vi sono **moduli con altissima copertura delle righe ma asserzioni deboli**, come g`estioneCartellaClinica.service.patologia` (100% di line coverage, 31% di mutation score) e `gestioneCartellaClinica.service.terapia` (100% di line coverage, 31% di mutation score), seguiti da `gestioneCartellaClinica.service.visitaMedica` (66% di line coverage, 38% di mutation score). 
+Dall'altro lato vi sono i **moduli penalizzati dalla scarsa copertura iniziale**, tra cui `autenticazione.jwt` (12% di line coverage, 7% di mutation score), `gestionePaziente.service` (21% di line coverage, 20% di mutation score) e `gestioneUtente.service`(17% di line coverage, 35% di mutation score).
 
 ## Mutation Score Improvement
+Il piano di miglioramento si articolerà in due fasi principali: in una prima fase si interverrà sui package `patologia`, `terapia`, `visitaMedica` e `reportCliniche.service`, in modo da migliorare la qualità delle verifiche, sostituendo le asserzioni troppo generiche con controlli su ciascun campo restituito, utilizzando poi insieme **ArgumentCaptor** e **Mockito.verify** per accertare che le operazioni di persistenza e aggiornamento modifichino correttamente lo stato delle entità.
+Successivamente, andremo ad ampliare la coverage attraverso la scrittura di nuovi test per i componenti attualmente sprovvisti di verifiche, come `gestionePaziente.service`, `gestioneUtente.service`, `autenticazione.jwt` e i service completamente scoperti.
+Una volta consolidata la suite sopra la soglia dell'**80% di mutation score** e dell'**80% di line coverage**, verrà configurato il parametro `<mutationThreshold>` nel `pom.xml` per rendere il controllo automatico parte fondamentale nelle build future.
