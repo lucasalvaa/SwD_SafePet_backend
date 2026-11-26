@@ -1,0 +1,60 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mysql-safepet
+    restart: on-failure:3
+    environment:
+      MYSQL_DATABASE: safepet
+      MYSQL_USER: /run/secrets/db_user
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+    secrets:
+      - db_user
+      - db_password
+      - db_root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  skin-detector:
+    image: lucasalvaa/skin-detector:latest
+    container_name: skin-detector
+    restart: on-failure:3
+    ports:
+      - "8000:8000"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    restart: on-failure:3
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/safepet?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+    secrets:
+      - source: db_password
+        target: spring.datasource.password
+      - source: db_user
+        target: spring.datasource.username
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      skin-detector:
+        condition: service_started
+
+secrets:
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_psw.txt
+  db_root_password:
+    file: ./secrets/db_root_psw.txt
+
+volumes:
+  mysql_data:
