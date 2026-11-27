@@ -1,20 +1,10 @@
-# stage 1: build
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM gcr.io/distroless/java21-debian13:nonroot
+
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-
-COPY src ./src
-COPY checkstyle.xml .
-RUN mvn clean package -DskipTests
-
-# stage 2: run
-FROM eclipse-temurin:21-jre-alpine
-WORKDIR /app
-
-COPY --from=build /app/target/*.jar app.jar
+COPY --chown=nonroot:nonroot target/backend.jar /app/backend.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# L'entrypoint della base image è già "java -jar"
+CMD ["/app/backend.jar"]
