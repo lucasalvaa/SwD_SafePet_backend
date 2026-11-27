@@ -34,6 +34,14 @@ jobs:
       - name: Build, Checkstyle & Test
         run: mvn -B -ntp clean verify
 
+      # Salva il report dei tests
+      - name: Upload test results
+        uses: actions/upload-artifact@v7.0.0
+        if: always()
+        with:
+          name: test-report
+          path: target/surefire-reports/
+
       # Generazione e salvataggio report Checkstyle
       - name: Generate Checkstyle Report
         if: always()
